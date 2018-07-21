@@ -22,6 +22,8 @@ module TextTokenize.Parser
     , defaultTokenizeAtom
     , defaultTokenizeAtomDm
     , defaultTokenizeForString
+
+    , ABSec (..)    -- TEMP
     ) where
 
 
@@ -151,9 +153,11 @@ instance CTokenize TokenizeAtomDm where
 
 -- | Parsing according properties (TokenizeBlock)
 instance CTokenize TokenizeBlock where
-    type ResToken TokenizeBlock = [TokenBlock]
+    --type ResToken TokenizeBlock = [TokenBlock]
+    type ResToken TokenizeBlock = [ABSec]
     tokenize tzb@(TokenizeBlock blc dlms str cln) text =
-        genBlocks tzb $ recBlock tzb (tokenize (TokenizeAtomDm dlms str cln) text) BBLeft defABSec []
+        recBlock tzb (tokenize (TokenizeAtomDm dlms str cln) text) BBLeft defABSec []
+        --genBlocks tzb $ recBlock tzb (tokenize (TokenizeAtomDm dlms str cln) text) BBLeft defABSec []
 
 
 
@@ -163,6 +167,8 @@ data ABSec
     = ABSec
         { abs_array :: [TokenAtomDm]
         }
+        deriving (Show, Eq)
+
 
 defABSec :: ABSec
 defABSec = 
@@ -192,50 +198,50 @@ recBlock :: TokenizeBlock
 --recBlock _ _ _ _ = []
 recBlock _ [] _ cur acc =
     acc ++ [cur]
-recBlock tzb@(TokenizeBlock (d,_) _ _ _) tadms@(x:xs) BBLeft cur acc =
+recBlock tzb@(TokenizeBlock (d,_) _ _ _) (x:xs) BBLeft cur acc =
     case x of
         TokenADMEmpty       -> recBlock tzb xs BBLeft cur acc
-        t@(TokenADMDelm v)  -> if   d == v
+        t1@(TokenADMDelm v) -> if   d == v
                                then recBlock tzb 
                                              xs 
                                              BBRight 
-                                             ABSec {abs_array = [t]}
+                                             ABSec {abs_array = [t1]}
                                              (acc ++ [cur])
                                else recBlock tzb 
                                              xs 
                                              BBLeft 
-                                             cur {abs_array = (abs_array cur) ++ [t]}
+                                             cur {abs_array = (abs_array cur) ++ [t1]}
                                              acc
-        t@(TokenADMBody v)  -> recBlock tzb 
+        t2@(TokenADMBody v) -> recBlock tzb 
                                         xs 
                                         BBLeft
-                                        cur {abs_array = (abs_array cur) ++ [t]}
+                                        cur {abs_array = (abs_array cur) ++ [t2]}
                                         acc
-recBlock tzb@(TokenizeBlock (_,d) _ _ _) tadms@(x:xs) BBRight cur acc =
+recBlock tzb@(TokenizeBlock (_,d) _ _ _) (x:xs) BBRight cur acc =
     case x of
         TokenADMEmpty       -> recBlock tzb xs BBRight cur acc
-        t@(TokenADMDelm v)  -> if   d == v
+        t1@(TokenADMDelm v) -> if   d == v
                                then recBlock tzb 
                                              xs 
                                              BBLeft 
                                              ABSec {abs_array = []}
-                                             acc ++ [cur {abs_array = (abs_array cur) ++ [t]}]
+                                             (acc ++ [cur {abs_array = (abs_array cur) ++ [t1]}])
                                else recBlock tzb 
                                              xs 
                                              BBRight 
-                                             cur {abs_array = (abs_array cur) ++ [t]}
+                                             cur {abs_array = (abs_array cur) ++ [t1]}
                                              acc
-        t@(TokenADMBody v)  -> recBlock tzb 
+        t2@(TokenADMBody v) -> recBlock tzb 
                                         xs 
-                                        BBLeft
-                                        cur {abs_array = (abs_array cur) ++ [t]}
+                                        BBRight
+                                        cur {abs_array = (abs_array cur) ++ [t2]}
                                         acc
 
 
-genBlocks :: TokenizeBlock
-          -> [ABSec]
-          -> [TokenBlock]
-genBlocks _ _ = []
+--genBlocks :: TokenizeBlock
+--          -> [ABSec]
+--          -> [TokenBlock]
+--genBlocks _ _ = []
 --genBlocks _ [] =
 --    []
 --genBlocks tzb ((ABSec []):xs) =
