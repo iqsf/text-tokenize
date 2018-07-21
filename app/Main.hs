@@ -15,18 +15,18 @@ import           TextTokenize.Parser
 -- | Entry point in the program
 main :: IO ()
 main = do 
-    putStrLn "\nTest defaultTokenizeProps\n"
-    putStrLn $ show $ tokenize defaultTokenizeProps                             "qqq wwwwww  eeeeeeee rrrrrr"
+    putStrLn "\nTest defaultTokenizeAtom\n"
+    putStrLn $ showMy $ tokenize defaultTokenizeAtom                             "qqq wwwwww  eeeeeeee rrrrrr"
     putStrLn ""
-    putStrLn $ show $ tokenize defaultTokenizeProps {tp_start = Just ["w","r"]} "qqq wwwwww  eeeeeeee rrrrrr"
+    putStrLn $ showMy $ tokenize defaultTokenizeAtom {ta_start = Just ["w","r"]} "qqq wwwwww  eeeeeeee rrrrrr"
     putStrLn ""
-    putStrLn $ show $ tokenize (TokenizeBlock [ ("{","}")
-                                              , ("/*","*/")
-                                              , ("\"","\"")
-                                              ] Nothing True
-                               ) 
+    putStrLn $ showMy $ tokenize (TokenizeBlock [ ("{","}")
+                                                , ("/*","*/")
+                                                , ("\"","\"")
+                                                ] Nothing True
+                                 ) 
     --                           "void func1 (var p, var t) { /* asasa */}"
-                               "lala beb qq foo 12345 \"lala bebe \n qq \t baar\""
+                                 "lala beb qq foo 12345 \"lala bebe \n qq \t baar\""
     putStrLn ""
     putStrLn "\nTest auxiliary functions\n"
     --putStrLn $ show $ breakOn "," "a::b::c"
@@ -35,6 +35,22 @@ main = do
     --putStrLn $ show $ recCrumbsN "{" ["void func1 (var p, var t) { /* asasa */}"]
     --putStrLn $ show $ recCN "{" "void func1 (var p, var t) { /* asasa */}"
 
+
+
+showMy :: Show a
+       => [a]
+       -> String
+showMy [] =
+    "[]"
+showMy (x:[]) =
+    "[" ++ show x ++ "]"
+showMy v =
+    "[ " ++ recS v ++ "\n]"
+    where
+        recS :: Show a => [a] -> String
+        recS [] = ""
+        recS (x:[]) = show x
+        recS (x:xs) = show x ++ "\n, " ++ recS xs
 
 
 
