@@ -22,8 +22,6 @@ module TextTokenize.Parser
     , defaultTokenizeAtom
     , defaultTokenizeAtomDm
     , defaultTokenizeForString
-
-    , ABSec (..)    -- TEMP
     ) where
 
 
@@ -154,11 +152,20 @@ instance CTokenize TokenizeAtomDm where
 
 -- | Parsing according properties (TokenizeBlock)
 instance CTokenize TokenizeBlock where
-    type ResToken TokenizeBlock = [TokenBlock]
+    type ResToken TokenizeBlock = Either Text [TokenBlock]
     --type ResToken TokenizeBlock = [ABSec]
     tokenize tzb@(TokenizeBlock blc dlms str cln) text =
         --recBlock tzb (tokenize (TokenizeAtomDm dlms str cln) text) BBLeft defABSec []
-        genBlocks tzb $ recBlock tzb (tokenize (TokenizeAtomDm dlms str cln) text) BBLeft defABSec []
+        case recBlock tzb (tokenize (TokenizeAtomDm dlms str cln) text) BBLeft defABSec [] of
+            []  -> Left "Error parsing "
+            r   -> let bls = genBlocks tzb r in if isAllOther bls == True
+                                                then Left "Error parsing"
+                                                else Right bls
+        where
+            isAllOther :: [TokenBlock] -> Bool
+            isAllOther []                       = True
+            isAllOther ((TokenBlockOther _):xs) = isAllOther xs
+            isAllOther (_:xs)                   = False
 
 
 

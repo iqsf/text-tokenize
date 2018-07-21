@@ -26,15 +26,21 @@ main = do
     --putStrLn $ showMy $ tokenize defaultTokenizeAtomDm                             "lala beb qq foo 12345 {lala bebe baar}"
     --putStrLn $ showMy $ tokenize defaultTokenizeAtomDm {tad_start = Just ["d"]}    "lala beb qq foo 12345 {lala bebe baar}"
     putStrLn $ show "Aaaaa \"bbb\""
-    putStrLn $ show "Aaaaa \"bbb\" \"cc\""
+    --putStrLn $ show "Aaaaa \"bbb\" \" \"cc\""
+    --putStrLn $ show "Aaaaa \"bbb\" \"\ncc\""
+    --putStrLn $ show "Aaaaa \"bbb\" \"cc\""
     putStrLn $ showMy $ tokenize defaultTokenizeAtomDm {tad_splits = ["\"", "\n"]} "Aaaaa \"bbb\""
-    putStrLn $ showMy $ tokenize defaultTokenizeAtomDm {tad_splits = ["\"", "\n"]} "Aaaaa \"bbb\" \" \"cc\""
+    --putStrLn $ showMy $ tokenize defaultTokenizeAtomDm {tad_splits = ["\"", "\n"]} "Aaaaa \"bbb\" \" \"cc\""
+    --putStrLn $ showMy $ tokenize defaultTokenizeAtomDm {tad_splits = ["\"", "\n"]} "Aaaaa \"bbb\" \"\ncc\""
+    --putStrLn $ showMy $ tokenize defaultTokenizeAtomDm {tad_splits = ["\"", "\n"]} "Aaaaa \"bbb\" \"cc\""
     
     putStrLn ""
     putStrLn "\nTest defaultTokenizeForString\n"
     --putStrLn $ showMy $ tokenize defaultTokenizeForString                          "lala beb qq foo 12345 \"lala bebe baar\""
-    putStrLn $ showMy $ tokenize defaultTokenizeForString                          "Aaaaa \"bbb\""
-    putStrLn $ showMy $ tokenize defaultTokenizeForString                          "Aaaaa \"bbb\" \" \"cc\""
+    putStrLn $ showEt $ tokenize defaultTokenizeForString                          "Aaaaa \"bbb\""
+    --putStrLn $ showEt $ tokenize defaultTokenizeForString                          "Aaaaa \"bbb\" \" \"cc\""
+    --putStrLn $ showEt $ tokenize defaultTokenizeForString                          "Aaaaa \"bbb\" \"\ncc\""
+    --putStrLn $ showEt $ tokenize defaultTokenizeForString                          "Aaaaa \"bbb\" \"cc\""
 
     putStrLn ""
     putStrLn "\nTest auxiliary functions\n"
@@ -46,6 +52,13 @@ main = do
     --putStrLn $ show $ recCN "{" "void func1 (var p, var t) { /* asasa */}"
 
 
+showEt :: Show a
+       => Either Text [a]
+       -> String
+showEt (Left err) = 
+    show err
+showEt (Right v) = 
+    showMy v
 
 showMy :: Show a
        => [a]
