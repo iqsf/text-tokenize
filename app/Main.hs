@@ -22,9 +22,11 @@ main = do
     putStrLn ""
     putStrLn $ show $ tokenize (TokenizeBlock [ ("{","}")
                                               , ("/*","*/")
+                                              , ("\"","\"")
                                               ] Nothing True
                                ) 
-                               "void func1 (var p, var t) { /* asasa */}"
+    --                           "void func1 (var p, var t) { /* asasa */}"
+                               "lala beb qq foo 12345 \"lala bebe \n qq \t baar\""
     putStrLn ""
     putStrLn "\nTest auxiliary functions\n"
     --putStrLn $ show $ breakOn "," "a::b::c"
