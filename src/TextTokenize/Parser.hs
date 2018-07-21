@@ -1,5 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FunctionalDependencies #-}
 ----------------------------------------------------------------
 -- Module for parsing
 ----------------------------------------------------------------
@@ -12,14 +14,14 @@ module TextTokenize.Parser
     , TokenizeBlock     (..)
 
     , TokenAtom         (..)
+    , TokenAtomDm       (..)
     , TokenBlock        (..)
-    , TypeBlock         (..)
 
     , space
 
     , defaultTokenizeAtom
     , defaultTokenizeAtomDm
-    , defaultTokenizeBlock
+    , defaultTokenizeForString
     ) where
 
 
@@ -53,7 +55,8 @@ data TokenizeAtomDm
 
 data TokenizeBlock 
     = TokenizeBlock 
-        { tb_delmits :: [(Text,Text)]    -- Array of delimiters for blocks (open block, close block)
+        { tb_block   :: (Text, Text)     -- Defining block boundaries
+        , tb_splits  :: [Text]    -- Array of delimiters for blocks (open block, close block)
         , tb_start   :: Maybe [Text]     -- Filter for blocks token by array of prefix text (OR)
         , tb_clean   :: Bool             -- Clearing from empty tokens
         }
@@ -61,18 +64,28 @@ data TokenizeBlock
 
 
 -- | Data for token after parsing
-data TokenAtom   = TokenEmpty    | TokenAtom            Text                     deriving (Show, Eq)
-data TokenAtomDm = TokenADMEmpty | TokenADMBody         Text | TokenADMDelm Text deriving (Show, Eq)
-data TokenBlock  =                 TokenBlock TypeBlock Text                     deriving (Show, Eq)
-data TokenOther  =                 TokenOther           Text                     deriving (Show, Eq)
+data TokenAtom   = TokenEmpty      | TokenAtom      Text                                              deriving (Show, Eq)
+data TokenAtomDm = TokenADMEmpty   | TokenADMBody   Text | TokenADMDelm   Text                        deriving (Show, Eq)
+data TokenBlock  = TokenBlockEmpty | TokenBlockBody Text | TokenBlockDelm Text | TokenBlockOther Text deriving (Show, Eq)
+data TokenOther  =                   TokenOther     Text                                              deriving (Show, Eq)
 
-    
+
+
+-- | Adapter class. The implementation allows you to create adapters 
+-- between different types.
+class Adaptable a b | a -> b where
+    adapter :: a -> b
+
+instance Adaptable TokenAtomDm TokenBlock where
+    adapter TokenADMEmpty = TokenBlockEmpty
+    adapter (TokenADMBody v) = TokenBlockBody v
+    adapter (TokenADMDelm v) = TokenBlockDelm v
 
 -- | Data of type block for token
-data TypeBlock 
-    = TBBody
-    | TBDelm
-    deriving (Show, Eq)
+--data TypeBlock 
+--    = TBBody
+--    | TBDelm
+--    deriving (Show, Eq)
 
 
 
@@ -98,11 +111,13 @@ defaultTokenizeAtomDm = TokenizeAtomDm
     }
 
 -- | Default properties for parsing (TokenizeBlock)
-defaultTokenizeBlock :: TokenizeBlock
-defaultTokenizeBlock = TokenizeBlock
-    { tb_delmits = [ ( "{"  , "}"  )
-                   , ( "/*" , "*/" )
-                   ]
+-- for String
+defaultTokenizeForString :: TokenizeBlock
+defaultTokenizeForString = TokenizeBlock
+    { tb_block  = ("\"", "\"")
+    , tb_splits = [ "\""  
+                  , "\n"  
+                  ]
     , tb_start  = Nothing
     , tb_clean  = True
     }
@@ -122,7 +137,7 @@ instance CTokenize TokenizeAtom where
 
 
 
--- | Parsing according properties (TokenizeBlock)
+-- | Parsing according properties (TokenizeAtomDm)
 instance CTokenize TokenizeAtomDm where
     type ResToken TokenizeAtomDm = [TokenAtomDm]
     tokenize (TokenizeAtomDm dlms str cln) text =
@@ -135,17 +150,102 @@ instance CTokenize TokenizeAtomDm where
 
 
 -- | Parsing according properties (TokenizeBlock)
---instance CTokenize TokenizeBlock where
---    type ResToken TokenizeBlock = [TokenBlock]
---    tokenize (TokenizeBlock dlms str cln) text =
---        PRL.map lM $ recCrumbs (masDlms dlms) [text]
---        where
---            masDlms :: [(Text, Text)] -> [Text]
---            masDlms dlms =
---                let (p1, p2) = PRL.unzip dlms in p1 ++ p2
---            lM :: Crumb -> TokenBlock
---            lM (TCrBody v) = TokenBlock TBBody v
---            lM (TCrDelm v) = TokenBlock TBDelm v
+instance CTokenize TokenizeBlock where
+    type ResToken TokenizeBlock = [TokenBlock]
+    tokenize tzb@(TokenizeBlock blc dlms str cln) text =
+        genBlocks tzb $ recBlock tzb (tokenize (TokenizeAtomDm dlms str cln) text) BBLeft defABSec []
+
+
+
+data BBState = BBLeft | BBRight
+
+data ABSec 
+    = ABSec
+        { abs_array :: [TokenAtomDm]
+        }
+
+defABSec :: ABSec
+defABSec = 
+    ABSec {abs_array = []}
+
+--unionABSec :: ABSec
+--           -> Text
+--unionABSec (ABSec a) = 
+--    recU a
+--    where
+--        recU :: [TokenAtomDm] -> [Text]
+--        recU [] = ""
+--        recU (x:xs) = 
+--            case x of
+--                TokenADMEmpty       -> "" ++ (recU xs)
+--                (TokenADMBody v)    -> v  ++ (recU xs)
+--                (TokenADMDelm v)    -> v  ++ (recU xs)
+
+                
+
+recBlock :: TokenizeBlock 
+         -> [TokenAtomDm]
+         -> BBState
+         -> ABSec
+         -> [ABSec]
+         -> [ABSec]
+--recBlock _ _ _ _ = []
+recBlock _ [] _ cur acc =
+    acc ++ [cur]
+recBlock tzb@(TokenizeBlock (d,_) _ _ _) tadms@(x:xs) BBLeft cur acc =
+    case x of
+        TokenADMEmpty       -> recBlock tzb xs BBLeft cur acc
+        t@(TokenADMDelm v)  -> if   d == v
+                               then recBlock tzb 
+                                             xs 
+                                             BBRight 
+                                             ABSec {abs_array = [t]}
+                                             (acc ++ [cur])
+                               else recBlock tzb 
+                                             xs 
+                                             BBLeft 
+                                             cur {abs_array = (abs_array cur) ++ [t]}
+                                             acc
+        t@(TokenADMBody v)  -> recBlock tzb 
+                                        xs 
+                                        BBLeft
+                                        cur {abs_array = (abs_array cur) ++ [t]}
+                                        acc
+recBlock tzb@(TokenizeBlock (_,d) _ _ _) tadms@(x:xs) BBRight cur acc =
+    case x of
+        TokenADMEmpty       -> recBlock tzb xs BBRight cur acc
+        t@(TokenADMDelm v)  -> if   d == v
+                               then recBlock tzb 
+                                             xs 
+                                             BBLeft 
+                                             ABSec {abs_array = []}
+                                             acc ++ [cur {abs_array = (abs_array cur) ++ [t]}]
+                               else recBlock tzb 
+                                             xs 
+                                             BBRight 
+                                             cur {abs_array = (abs_array cur) ++ [t]}
+                                             acc
+        t@(TokenADMBody v)  -> recBlock tzb 
+                                        xs 
+                                        BBLeft
+                                        cur {abs_array = (abs_array cur) ++ [t]}
+                                        acc
+
+
+genBlocks :: TokenizeBlock
+          -> [ABSec]
+          -> [TokenBlock]
+genBlocks _ _ = []
+--genBlocks _ [] =
+--    []
+--genBlocks tzb ((ABSec []):xs) =
+--    genBlocks tzb xs 
+--genBlocks tzb@(TokenizeBlock (l,r) _ _ _) ((ABSec a@(a1:a2:a3:[])):xs) =
+--    if   a1 == l && a3 == r
+--    then [PRL.map adapter a] ++ (genBlocks tzb xs)
+--    else []
+--genBlocks tzb ((ABSec []):xs) = []
+    
 
 
 

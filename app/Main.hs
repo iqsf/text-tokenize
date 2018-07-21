@@ -16,22 +16,23 @@ import           TextTokenize.Parser
 main :: IO ()
 main = do 
     putStrLn "\n---------------------------------------------"
+
     putStrLn "\nTest defaultTokenizeAtom\n"
+
     putStrLn $ showMy $ tokenize defaultTokenizeAtom                               "qqq wwwwww  eeeeeeee rrrrrr"
     putStrLn ""
     putStrLn $ showMy $ tokenize defaultTokenizeAtom   {ta_start = Just ["w","r"]} "qqq wwwwww  eeeeeeee rrrrrr"
     putStrLn ""
     putStrLn $ showMy $ tokenize defaultTokenizeAtomDm                             "lala beb qq foo 12345 {lala bebe baar}"
     putStrLn $ showMy $ tokenize defaultTokenizeAtomDm {tad_start = Just ["d"]}    "lala beb qq foo 12345 {lala bebe baar}"
-    --putStrLn $ showMy $ tokenize (TokenizeBlock [ ("{","}")
-    --                                            , ("/*","*/")
-    --                                            , ("\"","\"")
-    --                                            ] Nothing True
-    --                             ) 
-    --                             "void func1 (var p, var t) { /* asasa */}"
-    --                             "lala beb qq foo 12345 \"lala bebe \n qq \t baar\""
+    
+    putStrLn ""
+    putStrLn "\nTest defaultTokenizeForString\n"
+    putStrLn $ showMy $ tokenize defaultTokenizeForString                          "lala beb qq foo 12345 \"lala bebe baar\""
+
     putStrLn ""
     putStrLn "\nTest auxiliary functions\n"
+
     --putStrLn $ show $ breakOn "," "a::b::c"
     --putStrLn $ show $ recCrumbs ["{","}", " ", ","] ["void func1 (var p, var t) { /* asasa */}"]
     --putStrLn $ show $ recCrumbs ["{","}"] ["void func1 (var p, var t) { /* asasa */}"]
