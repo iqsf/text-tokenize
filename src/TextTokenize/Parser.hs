@@ -66,22 +66,23 @@ data TokenizeBlock
 
 
 -- | Data for token after parsing
-data TokenAtom   = TokenEmpty      | TokenAtom      Text                                              deriving (Show, Eq)
-data TokenAtomDm = TokenADMEmpty   | TokenADMBody   Text | TokenADMDelm   Text                        deriving (Show, Eq)
-data TokenBlock  = TokenBlockEmpty | TokenBlockBody Text | TokenBlockDelm Text | TokenBlockOther Text deriving (Show, Eq)
-data TokenOther  =                   TokenOther     Text                                              deriving (Show, Eq)
+data TokenAtom   = TokenEmpty      | TokenAtom      Text                        deriving (Show, Eq)
+data TokenAtomDm = TokenADMEmpty   | TokenADMBody   Text | TokenADMDelm    Text deriving (Show, Eq)
+data TokenBlock  = TokenBlockEmpty | TokenBlockBody Text | TokenBlockOther Text deriving (Show, Eq)
+--data TokenBlock  = TokenBlockEmpty | TokenBlockBody Text | TokenBlockDelm Text | TokenBlockOther Text deriving (Show, Eq)
+data TokenOther  =                   TokenOther     Text                        deriving (Show, Eq)
 
 
 
 -- | Adapter class. The implementation allows you to create adapters 
 -- between different types.
-class Adaptable a b | a -> b where
-    adapter :: a -> b
+--class Adaptable a b | a -> b where
+--    adapter :: a -> b
 
-instance Adaptable TokenAtomDm TokenBlock where
-    adapter TokenADMEmpty = TokenBlockEmpty
-    adapter (TokenADMBody v) = TokenBlockBody v
-    adapter (TokenADMDelm v) = TokenBlockDelm v
+--instance Adaptable TokenAtomDm TokenBlock where
+--    adapter TokenADMEmpty = TokenBlockEmpty
+--    adapter (TokenADMBody v) = TokenBlockBody v
+--    adapter (TokenADMDelm v) = TokenBlockDelm v
 
 -- | Data of type block for token
 --data TypeBlock 
@@ -153,11 +154,11 @@ instance CTokenize TokenizeAtomDm where
 
 -- | Parsing according properties (TokenizeBlock)
 instance CTokenize TokenizeBlock where
-    --type ResToken TokenizeBlock = [TokenBlock]
-    type ResToken TokenizeBlock = [ABSec]
+    type ResToken TokenizeBlock = [TokenBlock]
+    --type ResToken TokenizeBlock = [ABSec]
     tokenize tzb@(TokenizeBlock blc dlms str cln) text =
-        recBlock tzb (tokenize (TokenizeAtomDm dlms str cln) text) BBLeft defABSec []
-        --genBlocks tzb $ recBlock tzb (tokenize (TokenizeAtomDm dlms str cln) text) BBLeft defABSec []
+        --recBlock tzb (tokenize (TokenizeAtomDm dlms str cln) text) BBLeft defABSec []
+        genBlocks tzb $ recBlock tzb (tokenize (TokenizeAtomDm dlms str cln) text) BBLeft defABSec []
 
 
 
@@ -196,8 +197,10 @@ recBlock :: TokenizeBlock
          -> [ABSec]
          -> [ABSec]
 --recBlock _ _ _ _ = []
-recBlock _ [] _ cur acc =
+recBlock _ [] BBLeft cur acc =
     acc ++ [cur]
+recBlock _ [] BBRight cur acc =
+    []
 recBlock tzb@(TokenizeBlock (d,_) _ _ _) (x:xs) BBLeft cur acc =
     case x of
         TokenADMEmpty       -> recBlock tzb xs BBLeft cur acc
@@ -238,19 +241,24 @@ recBlock tzb@(TokenizeBlock (_,d) _ _ _) (x:xs) BBRight cur acc =
                                         acc
 
 
---genBlocks :: TokenizeBlock
---          -> [ABSec]
---          -> [TokenBlock]
---genBlocks _ _ = []
---genBlocks _ [] =
---    []
---genBlocks tzb ((ABSec []):xs) =
---    genBlocks tzb xs 
---genBlocks tzb@(TokenizeBlock (l,r) _ _ _) ((ABSec a@(a1:a2:a3:[])):xs) =
---    if   a1 == l && a3 == r
---    then [PRL.map adapter a] ++ (genBlocks tzb xs)
---    else []
---genBlocks tzb ((ABSec []):xs) = []
+genBlocks :: TokenizeBlock
+          -> [ABSec]
+          -> [TokenBlock]
+genBlocks _ [] =
+    []
+genBlocks tzb ((ABSec []):xs) =
+    genBlocks tzb xs 
+genBlocks tzb@(TokenizeBlock (l,r) _ _ _) ((ABSec a@(a1:a2:a3:[])):xs) =
+    case (a1,a2,a3) of
+        ((TokenADMDelm l), (TokenADMBody b), (TokenADMDelm r))  -> [TokenBlockBody b] ++ (genBlocks tzb xs)
+        _                                                       -> []
+genBlocks tzb ((ABSec aa):xs) = 
+    (PRL.map lM aa) ++ (genBlocks tzb xs)
+    where
+        lM :: TokenAtomDm -> TokenBlock
+        lM TokenADMEmpty    = TokenBlockEmpty
+        lM (TokenADMBody v) = TokenBlockOther v 
+        lM (TokenADMDelm v) = TokenBlockOther v
     
 
 

@@ -28,13 +28,13 @@ main = do
     putStrLn $ show "Aaaaa \"bbb\""
     putStrLn $ show "Aaaaa \"bbb\" \"cc\""
     putStrLn $ showMy $ tokenize defaultTokenizeAtomDm {tad_splits = ["\"", "\n"]} "Aaaaa \"bbb\""
-    putStrLn $ showMy $ tokenize defaultTokenizeAtomDm {tad_splits = ["\"", "\n"]} "Aaaaa \"bbb\" \"cc\""
+    putStrLn $ showMy $ tokenize defaultTokenizeAtomDm {tad_splits = ["\"", "\n"]} "Aaaaa \"bbb\" \" \"cc\""
     
     putStrLn ""
     putStrLn "\nTest defaultTokenizeForString\n"
     --putStrLn $ showMy $ tokenize defaultTokenizeForString                          "lala beb qq foo 12345 \"lala bebe baar\""
     putStrLn $ showMy $ tokenize defaultTokenizeForString                          "Aaaaa \"bbb\""
-    putStrLn $ showMy $ tokenize defaultTokenizeForString                          "Aaaaa \"bbb\" \"cc\""
+    putStrLn $ showMy $ tokenize defaultTokenizeForString                          "Aaaaa \"bbb\" \" \"cc\""
 
     putStrLn ""
     putStrLn "\nTest auxiliary functions\n"
