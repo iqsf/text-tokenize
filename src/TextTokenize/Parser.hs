@@ -5,18 +5,20 @@
 ----------------------------------------------------------------
 
 module TextTokenize.Parser
-    ( CTokenize     (..) 
+    ( CTokenize         (..) 
 
-    , TokenizeAtom  (..)
-    , TokenizeBlock (..)
+    , TokenizeAtom      (..)
+    , TokenizeAtomDm    (..)
+    , TokenizeBlock     (..)
 
-    , TokenAtom     (..)
-    , TokenBlock    (..)
-    , TypeBlock     (..)
+    , TokenAtom         (..)
+    , TokenBlock        (..)
+    , TypeBlock         (..)
 
     , space
 
     , defaultTokenizeAtom
+    , defaultTokenizeAtomDm
     , defaultTokenizeBlock
     ) where
 
@@ -42,6 +44,13 @@ data TokenizeAtom
         , ta_clean   :: Bool             -- Clearing from empty tokens
         }
 
+data TokenizeAtomDm 
+    = TokenizeAtomDm 
+        { tad_splits  :: [Text]          -- Array of delimiters for blocks (open block, close block)
+        , tad_start   :: Maybe [Text]    -- Filter for blocks token by array of prefix text (OR)
+        , tad_clean   :: Bool            -- Clearing from empty tokens
+        }
+
 data TokenizeBlock 
     = TokenizeBlock 
         { tb_delmits :: [(Text,Text)]    -- Array of delimiters for blocks (open block, close block)
@@ -52,9 +61,10 @@ data TokenizeBlock
 
 
 -- | Data for token after parsing
-data TokenAtom  = TokenEmpty | TokenAtom            Text deriving (Show, Eq)
-data TokenBlock =              TokenBlock TypeBlock Text deriving (Show, Eq)
-data TokenOther =              TokenOther           Text deriving (Show, Eq)
+data TokenAtom   = TokenEmpty    | TokenAtom            Text                     deriving (Show, Eq)
+data TokenAtomDm = TokenADMEmpty | TokenADMBody         Text | TokenADMDelm Text deriving (Show, Eq)
+data TokenBlock  =                 TokenBlock TypeBlock Text                     deriving (Show, Eq)
+data TokenOther  =                 TokenOther           Text                     deriving (Show, Eq)
 
     
 
@@ -77,6 +87,14 @@ defaultTokenizeAtom = TokenizeAtom
     { ta_splits = [" "]
     , ta_start  = Nothing
     , ta_clean  = True
+    }
+
+-- | Default properties for parsing (TokenizeAtomDm)
+defaultTokenizeAtomDm :: TokenizeAtomDm
+defaultTokenizeAtomDm = TokenizeAtomDm
+    { tad_splits = ["{", "}", "/*", "*/"]
+    , tad_start  = Nothing
+    , tad_clean  = True
     }
 
 -- | Default properties for parsing (TokenizeBlock)
@@ -103,18 +121,31 @@ instance CTokenize TokenizeAtom where
             True  -> PRL.filter lF $ PRL.map lM $ recAtom ss [text]
 
 
+
 -- | Parsing according properties (TokenizeBlock)
-instance CTokenize TokenizeBlock where
-    type ResToken TokenizeBlock = [TokenBlock]
-    tokenize (TokenizeBlock dlms str cln) text =
-        PRL.map lM $ recCrumbs (masDlms dlms) [text]
+instance CTokenize TokenizeAtomDm where
+    type ResToken TokenizeAtomDm = [TokenAtomDm]
+    tokenize (TokenizeAtomDm dlms str cln) text =
+        PRL.map (lM str) $ recCrumbs dlms [text]
         where
-            masDlms :: [(Text, Text)] -> [Text]
-            masDlms dlms =
-                let (p1, p2) = PRL.unzip dlms in p1 ++ p2
-            lM :: Crumb -> TokenBlock
-            lM (TCrBody v) = TokenBlock TBBody v
-            lM (TCrDelm v) = TokenBlock TBDelm v
+            lM :: Maybe [Text] -> Crumb -> TokenAtomDm
+            lM str (TCrBody v) = if v == "" || recIsStart str v == False then TokenADMEmpty else TokenADMBody v
+            lM _   (TCrDelm v) = TokenADMDelm v
+
+
+
+-- | Parsing according properties (TokenizeBlock)
+--instance CTokenize TokenizeBlock where
+--    type ResToken TokenizeBlock = [TokenBlock]
+--    tokenize (TokenizeBlock dlms str cln) text =
+--        PRL.map lM $ recCrumbs (masDlms dlms) [text]
+--        where
+--            masDlms :: [(Text, Text)] -> [Text]
+--            masDlms dlms =
+--                let (p1, p2) = PRL.unzip dlms in p1 ++ p2
+--            lM :: Crumb -> TokenBlock
+--            lM (TCrBody v) = TokenBlock TBBody v
+--            lM (TCrDelm v) = TokenBlock TBDelm v
 
 
 
