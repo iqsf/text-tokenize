@@ -130,7 +130,7 @@ instance CTokenize TokenizeAtom where
     type ResToken TokenizeAtom = [TokenAtom]
     tokenize (TokenizeAtom ss str cln) text =
         let lM = \v -> if v == "" || recIsStart str v == False then TokenEmpty else TokenAtom v
-            lF = \v -> if v == TokenEmpty                      then False      else True
+            lF v = v /= TokenEmpty
         in
         case cln of
             False -> PRL.map    lM $ recAtom ss [text]
@@ -181,19 +181,6 @@ data ABSec
 defABSec :: ABSec
 defABSec = 
     ABSec {abs_array = []}
-
---unionABSec :: ABSec
---           -> Text
---unionABSec (ABSec a) = 
---    recU a
---    where
---        recU :: [TokenAtomDm] -> [Text]
---        recU [] = ""
---        recU (x:xs) = 
---            case x of
---                TokenADMEmpty       -> "" ++ (recU xs)
---                (TokenADMBody v)    -> v  ++ (recU xs)
---                (TokenADMDelm v)    -> v  ++ (recU xs)
 
                 
 
@@ -298,11 +285,7 @@ recIsStart Nothing  _    =
 recIsStart (Just p) text =
     recIsStartN p text
     where
-        recIsStartN []     _    = False
-        recIsStartN (x:xs) text =
-            if T.isPrefixOf x text == True 
-            then True 
-            else recIsStartN xs text
+        recIsStartN xs text = PRL.any (\x -> T.isPrefixOf x text) xs
 
 
 
@@ -342,7 +325,7 @@ recCrumbsN :: Text
            -> Crumbs
 recCrumbsN _  []     = []  
 recCrumbsN ss ((TCrDelm x):xs) =
-    [TCrDelm x] ++ recCrumbsN ss xs
+    TCrDelm x : recCrumbsN ss xs
 recCrumbsN ss ((TCrBody x):xs) = 
     (recCN ss x) ++ (recCrumbsN ss xs)
     where
