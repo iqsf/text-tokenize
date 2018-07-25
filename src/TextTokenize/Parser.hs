@@ -265,15 +265,15 @@ recAtom :: [Text]
         -> [Text] 
         -> [Text]
 recAtom [] texts    = texts
-recAtom (x:xs) texts =  
-    recAtom xs (recAtomN x texts)
+recAtom tss texts =  
+    PRL.foldl recAtomN texts tss
 
-recAtomN :: Text 
-         -> [Text] 
+recAtomN :: [Text] 
+         -> Text 
          -> [Text]
-recAtomN _  []     = []  
-recAtomN ss (x:xs) =  
-    (T.splitOn ss x) ++ (recAtomN ss xs)
+recAtomN [] _      = []  
+recAtomN (x:xs) ss =  
+    (T.splitOn x ss) ++ (recAtomN xs ss)
 
 
 
@@ -317,17 +317,18 @@ recCrumbsI :: [Text]
            -> Crumbs
            -> Crumbs
 recCrumbsI [] texts    = texts
-recCrumbsI (x:xs) texts =  
-    recCrumbsI xs (recCrumbsN x texts)
+recCrumbsI ts texts =  
+    PRL.foldl recCrumbsN texts ts
 
-recCrumbsN :: Text 
-           -> Crumbs 
+
+recCrumbsN :: Crumbs 
+           -> Text 
            -> Crumbs
-recCrumbsN _  []     = []  
-recCrumbsN ss ((TCrDelm x):xs) =
-    TCrDelm x : recCrumbsN ss xs
-recCrumbsN ss ((TCrBody x):xs) = 
-    (recCN ss x) ++ (recCrumbsN ss xs)
+recCrumbsN [] _       = []  
+recCrumbsN ((TCrDelm x):xs) ss =
+    TCrDelm x : recCrumbsN xs ss
+recCrumbsN ((TCrBody x):xs) ss = 
+    (recCN ss x) ++ (recCrumbsN xs ss)
     where
         recCN :: Text -> Text -> Crumbs
         recCN s t =
@@ -336,7 +337,6 @@ recCrumbsN ss ((TCrBody x):xs) =
                      ls    = T.length  s
                  in [TCrBody l, TCrDelm s] ++ recCN s (T.drop ls r)
             else [TCrBody t]
-
 
 
 
