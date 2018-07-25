@@ -320,7 +320,6 @@ recCrumbsI [] texts    = texts
 recCrumbsI ts texts =  
     PRL.foldl recCrumbsN texts ts
 
-
 recCrumbsN :: Crumbs 
            -> Text 
            -> Crumbs
@@ -337,7 +336,6 @@ recCrumbsN ((TCrBody x):xs) ss =
                      ls    = T.length  s
                  in [TCrBody l, TCrDelm s] ++ recCN s (T.drop ls r)
             else [TCrBody t]
-
 
 
 
