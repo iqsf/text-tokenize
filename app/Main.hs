@@ -19,17 +19,17 @@ main = do
 
     putStrLn "\nTest defaultTokenizeAtom\n"
 
-    --putStrLn $ showMy $ tokenize defaultTokenizeAtom                               "qqq wwwwww  eeeeeeee rrrrrr"
+    putStrLn $ showMy $ tokenize defaultTokenizeAtom                               "qqq wwwwww  eeeeeeee rrrrrr"
     --putStrLn ""
-    --putStrLn $ showMy $ tokenize defaultTokenizeAtom   {ta_start = Just ["w","r"]} "qqq wwwwww  eeeeeeee rrrrrr"
+--    putStrLn $ showMy $ tokenize defaultTokenizeAtom   {ta_start = Just ["w","r"]} "qqq wwwwww  eeeeeeee rrrrrr"
     --putStrLn ""
     --putStrLn $ showMy $ tokenize defaultTokenizeAtomDm                             "lala beb qq foo 12345 {lala bebe baar}"
     --putStrLn $ showMy $ tokenize defaultTokenizeAtomDm {tad_start = Just ["d"]}    "lala beb qq foo 12345 {lala bebe baar}"
-    putStrLn $ show "Aaaaa \"bbb\""
+--    putStrLn $ show "Aaaaa \"bbb\""
     --putStrLn $ show "Aaaaa \"bbb\" \" \"cc\""
     --putStrLn $ show "Aaaaa \"bbb\" \"\ncc\""
     --putStrLn $ show "Aaaaa \"bbb\" \"cc\""
-    putStrLn $ showMy $ tokenize defaultTokenizeAtomDm {tad_splits = ["\"", "\n"]} "Aaaaa \"bbb\""
+--    putStrLn $ showMy $ tokenize defaultTokenizeAtomDm {tad_splits = ["\"", "\n"]} "Aaaaa \"bbb\""
     --putStrLn $ showMy $ tokenize defaultTokenizeAtomDm {tad_splits = ["\"", "\n"]} "Aaaaa \"bbb\" \" \"cc\""
     --putStrLn $ showMy $ tokenize defaultTokenizeAtomDm {tad_splits = ["\"", "\n"]} "Aaaaa \"bbb\" \"\ncc\""
     --putStrLn $ showMy $ tokenize defaultTokenizeAtomDm {tad_splits = ["\"", "\n"]} "Aaaaa \"bbb\" \"cc\""
@@ -37,13 +37,17 @@ main = do
     putStrLn ""
     putStrLn "\nTest defaultTokenizeForString\n"
     --putStrLn $ showMy $ tokenize defaultTokenizeForString                          "lala beb qq foo 12345 \"lala bebe baar\""
+    putStrLn $ show                                                                "Aaaaa \"bbb\""
     putStrLn $ showEt $ tokenize defaultTokenizeForString                          "Aaaaa \"bbb\""
+    putStrLn $ show                                                                "Aaaaa \"bb\"b\""
+    putStrLn $ showEt $ tokenize defaultTokenizeForString                          "Aaaaa \"bb\"b\""
     --putStrLn $ showEt $ tokenize defaultTokenizeForString                          "Aaaaa \"bbb\" \" \"cc\""
     --putStrLn $ showEt $ tokenize defaultTokenizeForString                          "Aaaaa \"bbb\" \"\ncc\""
     --putStrLn $ showEt $ tokenize defaultTokenizeForString                          "Aaaaa \"bbb\" \"cc\""
 
     putStrLn ""
     putStrLn "\nTest auxiliary functions\n"
+    --putStrLn $ show $ recAtom [" "] ["qq  wwwww  eeeeee rrrrr"]
 
     --putStrLn $ show $ breakOn "," "a::b::c"
     --putStrLn $ show $ recCrumbs ["{","}", " ", ","] ["void func1 (var p, var t) { /* asasa */}"]

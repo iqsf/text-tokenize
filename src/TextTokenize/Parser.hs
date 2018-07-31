@@ -2,6 +2,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE LambdaCase #-}
 ----------------------------------------------------------------
 -- Module for parsing
 ----------------------------------------------------------------
@@ -22,53 +23,56 @@ module TextTokenize.Parser
     , defaultTokenizeAtom
     , defaultTokenizeAtomDm
     , defaultTokenizeForString
+
+    , recAtom
+    , recCrumbs, Crumb (..)
     ) where
 
 
 
 -- Import of modules
-import           Prelude                 as PRL
-import           Data.Text               as T
+import           Prelude
+import qualified Data.Text               as T
 
 
 
 class CTokenize p where
     type ResToken p
-    tokenize :: p -> Text -> ResToken p
+    tokenize :: p -> T.Text -> ResToken p
 
 
 
 -- | Properties for parsing
 data TokenizeAtom 
     = TokenizeAtom 
-        { ta_splits  :: [Text]           -- Array of delimiters for atoms
-        , ta_start   :: Maybe [Text]     -- Filter for atoms token by array of prefix text (OR)
+        { ta_splits  :: [T.Text]         -- Array of delimiters for atoms
+        , ta_start   :: Maybe [T.Text]   -- Filter for atoms token by array of prefix text (OR)
         , ta_clean   :: Bool             -- Clearing from empty tokens
         }
 
 data TokenizeAtomDm 
     = TokenizeAtomDm 
-        { tad_splits  :: [Text]          -- Array of delimiters for blocks (open block, close block)
-        , tad_start   :: Maybe [Text]    -- Filter for blocks token by array of prefix text (OR)
+        { tad_splits  :: [T.Text]        -- Array of delimiters for blocks (open block, close block)
+        , tad_start   :: Maybe [T.Text]  -- Filter for blocks token by array of prefix text (OR)
         , tad_clean   :: Bool            -- Clearing from empty tokens
         }
 
 data TokenizeBlock 
     = TokenizeBlock 
-        { tb_block   :: (Text, Text)     -- Defining block boundaries
-        , tb_splits  :: [Text]    -- Array of delimiters for blocks (open block, close block)
-        , tb_start   :: Maybe [Text]     -- Filter for blocks token by array of prefix text (OR)
+        { tb_block   :: (T.Text, T.Text) -- Defining block boundaries
+        , tb_splits  :: [T.Text]         -- Array of delimiters for blocks (open block, close block)
+        , tb_start   :: Maybe [T.Text]   -- Filter for blocks token by array of prefix text (OR)
         , tb_clean   :: Bool             -- Clearing from empty tokens
         }
 
 
 
 -- | Data for token after parsing
-data TokenAtom   = TokenEmpty      | TokenAtom      Text                        deriving (Show, Eq)
-data TokenAtomDm = TokenADMEmpty   | TokenADMBody   Text | TokenADMDelm    Text deriving (Show, Eq)
-data TokenBlock  = TokenBlockEmpty | TokenBlockBody Text | TokenBlockOther Text deriving (Show, Eq)
---data TokenBlock  = TokenBlockEmpty | TokenBlockBody Text | TokenBlockDelm Text | TokenBlockOther Text deriving (Show, Eq)
-data TokenOther  =                   TokenOther     Text                        deriving (Show, Eq)
+data TokenAtom   = TokenEmpty      | TokenAtom      T.Text                        deriving (Show, Eq)
+data TokenAtomDm = TokenADMEmpty   | TokenADMBody   T.Text | TokenADMDelm    T.Text deriving (Show, Eq)
+data TokenBlock  = TokenBlockEmpty | TokenBlockBody T.Text | TokenBlockOther T.Text deriving (Show, Eq)
+--data TokenBlock  = TokenBlockEmpty | TokenBlockBody T.Text | TokenBlockDelm T.Text | TokenBlockOther T.Text deriving (Show, Eq)
+data TokenOther  =                   TokenOther     T.Text                        deriving (Show, Eq)
 
 
 
@@ -90,7 +94,7 @@ data TokenOther  =                   TokenOther     Text                        
 
 
 
-space :: Text
+space :: T.Text
 space = " "
 
 
@@ -98,7 +102,7 @@ space = " "
 -- | Default properties for parsing (TokenizeAtom)
 defaultTokenizeAtom :: TokenizeAtom
 defaultTokenizeAtom = TokenizeAtom
-    { ta_splits = [" "]
+    { ta_splits = [space]
     , ta_start  = Nothing
     , ta_clean  = True
     }
@@ -128,49 +132,62 @@ defaultTokenizeForString = TokenizeBlock
 -- | Parsing according properties (TokenizeAtom)
 instance CTokenize TokenizeAtom where
     type ResToken TokenizeAtom = [TokenAtom]
-    tokenize (TokenizeAtom ss str cln) text =
-        let lM = \v -> if v == "" || recIsStart str v == False then TokenEmpty else TokenAtom v
-            lF v = v /= TokenEmpty
-        in
-        case cln of
-            False -> PRL.map    lM $ recAtom ss [text]
-            True  -> PRL.filter lF $ PRL.map lM $ recAtom ss [text]
+    tokenize (TokenizeAtom ss str cln) text
+        | cln       = filter (TokenEmpty /=) tokens
+        | otherwise = tokens
+        where
+            -- It is impossible to use пгфквы from error: In a stmt of a pattern guard 
+            -- for an equation ‘wrapInToken’: recIsStart str v
+            --wrapInToken v | null v             = TokenEmpty
+            --              | (recIsStart str v) = TokenAtom v
+            --              | otherwise          = TokenEmpty
+            wrapInToken :: T.Text -> TokenAtom
+            wrapInToken v = 
+                if   v == "" || recIsStart str v == False 
+                then TokenEmpty 
+                else TokenAtom v
+            tokens = map wrapInToken $ recAtom ss [text]
 
 
 
 -- | Parsing according properties (TokenizeAtomDm)
 instance CTokenize TokenizeAtomDm where
     type ResToken TokenizeAtomDm = [TokenAtomDm]
-    tokenize (TokenizeAtomDm dlms str cln) text =
-        PRL.map (lM str) $ recCrumbs dlms [text]
+    tokenize (TokenizeAtomDm dlms str cln) text
+        | cln       = filter (TokenADMEmpty /=) tokens
+        | otherwise = tokens
         where
-            lM :: Maybe [Text] -> Crumb -> TokenAtomDm
-            lM str (TCrBody v) = if v == "" || recIsStart str v == False then TokenADMEmpty else TokenADMBody v
-            lM _   (TCrDelm v) = TokenADMDelm v
+            wrapInToken :: Crumb -> TokenAtomDm
+            wrapInToken (TCrBody v) = if   v == "" || recIsStart str v == False 
+                                      then TokenADMEmpty 
+                                      else TokenADMBody v
+            wrapInToken (TCrDelm v) = TokenADMDelm v
+            tokens = map wrapInToken $ recCrumbs dlms [text]
 
 
 
 -- | Parsing according properties (TokenizeBlock)
 instance CTokenize TokenizeBlock where
-    type ResToken TokenizeBlock = Either Text [TokenBlock]
+    type ResToken TokenizeBlock = Either T.Text [TokenBlock]
     --type ResToken TokenizeBlock = [ABSec]
     tokenize tzb@(TokenizeBlock blc dlms str cln) text =
         --recBlock tzb (tokenize (TokenizeAtomDm dlms str cln) text) BBLeft defABSec []
         case recBlock tzb (tokenize (TokenizeAtomDm dlms str cln) text) BBLeft defABSec [] of
             []  -> Left "Error parsing "
-            r   -> let bls = genBlocks tzb r in if isAllOther bls == True
-                                                then Left "Error parsing"
-                                                else Right bls
+            r   -> if   (isAllOther $ bls r) == True
+                   then Left "Error parsing"
+                   else Right $ bls r
         where
+            bls r = genBlocks tzb r
             isAllOther :: [TokenBlock] -> Bool
-            isAllOther []                       = True
-            isAllOther ((TokenBlockOther _):xs) = isAllOther xs
-            isAllOther (_:xs)                   = False
+            isAllOther = all $ \case (TokenBlockOther _) -> True
+                                     _                   -> False
 
 
-
+-- | Type for mark for serching left and rite block boundaries
 data BBState = BBLeft | BBRight
 
+-- | Intermediate type for grouping
 data ABSec 
     = ABSec
         { abs_array :: [TokenAtomDm]
@@ -190,7 +207,6 @@ recBlock :: TokenizeBlock
          -> ABSec
          -> [ABSec]
          -> [ABSec]
---recBlock _ _ _ _ = []
 recBlock _ [] BBLeft cur acc =
     acc ++ [cur]
 recBlock _ [] BBRight cur acc =
@@ -247,7 +263,7 @@ genBlocks tzb@(TokenizeBlock (l,r) _ _ _) ((ABSec a@(a1:a2:a3:[])):xs) =
         ((TokenADMDelm l), (TokenADMBody b), (TokenADMDelm r))  -> [TokenBlockBody b] ++ (genBlocks tzb xs)
         _                                                       -> []
 genBlocks tzb ((ABSec aa):xs) = 
-    (PRL.map lM aa) ++ (genBlocks tzb xs)
+    (map lM aa) ++ (genBlocks tzb xs)
     where
         lM :: TokenAtomDm -> TokenBlock
         lM TokenADMEmpty    = TokenBlockEmpty
@@ -261,37 +277,37 @@ genBlocks tzb ((ABSec aa):xs) =
 -- Auxiliary functions   ----------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------
 
-recAtom :: [Text] 
-        -> [Text] 
-        -> [Text]
+recAtom :: [T.Text] 
+        -> [T.Text] 
+        -> [T.Text]
 recAtom [] texts    = texts
 recAtom tss texts =  
-    PRL.foldl recAtomN texts tss
+    foldl recAtomN tss texts
 
-recAtomN :: [Text] 
-         -> Text 
-         -> [Text]
+recAtomN :: [T.Text] 
+         -> T.Text 
+         -> [T.Text]
 recAtomN [] _      = []  
 recAtomN (x:xs) ss =  
     (T.splitOn x ss) ++ (recAtomN xs ss)
 
 
 
-recIsStart :: Maybe [Text] 
-           -> Text 
+recIsStart :: Maybe [T.Text] 
+           -> T.Text 
            -> Bool
 recIsStart Nothing  _    = 
     True
 recIsStart (Just p) text =
     recIsStartN p text
     where
-        recIsStartN xs text = PRL.any (\x -> T.isPrefixOf x text) xs
+        recIsStartN xs text = any (\x -> T.isPrefixOf x text) xs
 
 
 
 data Crumb 
-    = TCrBody Text
-    | TCrDelm Text
+    = TCrBody T.Text
+    | TCrDelm T.Text
     deriving (Show, Eq)
 
 type Crumbs = [Crumb]
@@ -305,23 +321,24 @@ isEmptyTCr (TCrDelm "") =
 isEmptyTCr _ = 
     False
 
-recCrumbs :: [Text] 
-          -> [Text]
+recCrumbs :: [T.Text] 
+          -> [T.Text]
           -> Crumbs
 recCrumbs ss texts =
-    let textsTCr = PRL.map (\v -> TCrBody v) texts
-        lF       = \v -> not $ isEmptyTCr v
-    in PRL.filter lF $ recCrumbsI ss textsTCr
+    filter lF $ recCrumbsI ss textsTCr
+    where 
+        textsTCr = map (\v -> TCrBody v) texts
+        lF v     = not $ isEmptyTCr v
 
-recCrumbsI :: [Text] 
+recCrumbsI :: [T.Text] 
            -> Crumbs
            -> Crumbs
 recCrumbsI [] texts    = texts
 recCrumbsI ts texts =  
-    PRL.foldl recCrumbsN texts ts
+    foldl recCrumbsN texts ts
 
 recCrumbsN :: Crumbs 
-           -> Text 
+           -> T.Text 
            -> Crumbs
 recCrumbsN [] _       = []  
 recCrumbsN ((TCrDelm x):xs) ss =
@@ -329,7 +346,7 @@ recCrumbsN ((TCrDelm x):xs) ss =
 recCrumbsN ((TCrBody x):xs) ss = 
     (recCN ss x) ++ (recCrumbsN xs ss)
     where
-        recCN :: Text -> Text -> Crumbs
+        recCN :: T.Text -> T.Text -> Crumbs
         recCN s t =
             if   T.isInfixOf s t
             then let (l,r) = T.breakOn s t
