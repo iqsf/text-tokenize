@@ -21,7 +21,7 @@ main = do
 
     putStrLn $ showMy $ tokenize defaultTokenizeAtom                               "qqq wwwwww  eeeeeeee rrrrrr"
     --putStrLn ""
---    putStrLn $ showMy $ tokenize defaultTokenizeAtom   {ta_start = Just ["w","r"]} "qqq wwwwww  eeeeeeee rrrrrr"
+    putStrLn $ showMy $ tokenize defaultTokenizeAtom   {ta_start = Just ["w","r"]} "qqq wwwwww  eeeeeeee rrrrrr"
     --putStrLn ""
     --putStrLn $ showMy $ tokenize defaultTokenizeAtomDm                             "lala beb qq foo 12345 {lala bebe baar}"
     --putStrLn $ showMy $ tokenize defaultTokenizeAtomDm {tad_start = Just ["d"]}    "lala beb qq foo 12345 {lala bebe baar}"

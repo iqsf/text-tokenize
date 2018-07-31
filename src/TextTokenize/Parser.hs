@@ -143,7 +143,7 @@ instance CTokenize TokenizeAtom where
             --              | otherwise          = TokenEmpty
             wrapInToken :: T.Text -> TokenAtom
             wrapInToken v = 
-                if   v == "" || recIsStart str v == False 
+                if   T.null v || recIsStart str v == False 
                 then TokenEmpty 
                 else TokenAtom v
             tokens = map wrapInToken $ recAtom ss [text]
@@ -158,7 +158,7 @@ instance CTokenize TokenizeAtomDm where
         | otherwise = tokens
         where
             wrapInToken :: Crumb -> TokenAtomDm
-            wrapInToken (TCrBody v) = if   v == "" || recIsStart str v == False 
+            wrapInToken (TCrBody v) = if   T.null v || recIsStart str v == False 
                                       then TokenADMEmpty 
                                       else TokenADMBody v
             wrapInToken (TCrDelm v) = TokenADMDelm v
@@ -182,6 +182,7 @@ instance CTokenize TokenizeBlock where
             isAllOther :: [TokenBlock] -> Bool
             isAllOther = all $ \case (TokenBlockOther _) -> True
                                      _                   -> False
+
 
 
 -- | Type for mark for serching left and rite block boundaries
@@ -283,26 +284,18 @@ recAtom :: [T.Text]
 recAtom [] texts    = texts
 recAtom tss texts =  
     foldl recAtomN tss texts
-
-recAtomN :: [T.Text] 
-         -> T.Text 
-         -> [T.Text]
-recAtomN [] _      = []  
-recAtomN (x:xs) ss =  
-    (T.splitOn x ss) ++ (recAtomN xs ss)
+    where
+        recAtomN :: [T.Text] -> T.Text -> [T.Text]
+        recAtomN ss t =
+            concatMap (\v -> T.splitOn v t) ss
 
 
 
 recIsStart :: Maybe [T.Text] 
            -> T.Text 
            -> Bool
-recIsStart Nothing  _    = 
-    True
-recIsStart (Just p) text =
-    recIsStartN p text
-    where
-        recIsStartN xs text = any (\x -> T.isPrefixOf x text) xs
-
+recIsStart Nothing  _    = True
+recIsStart (Just p) text = any (`T.isPrefixOf` text) p
 
 
 data Crumb 
@@ -311,6 +304,7 @@ data Crumb
     deriving (Show, Eq)
 
 type Crumbs = [Crumb]
+
 
 isEmptyTCr :: Crumb
            -> Bool
@@ -325,15 +319,12 @@ recCrumbs :: [T.Text]
           -> [T.Text]
           -> Crumbs
 recCrumbs ss texts =
-    filter lF $ recCrumbsI ss textsTCr
-    where 
-        textsTCr = map (\v -> TCrBody v) texts
-        lF v     = not $ isEmptyTCr v
+    filter (not . isEmptyTCr) $ recCrumbsI ss (map TCrBody texts)
+
 
 recCrumbsI :: [T.Text] 
            -> Crumbs
            -> Crumbs
-recCrumbsI [] texts    = texts
 recCrumbsI ts texts =  
     foldl recCrumbsN texts ts
 
