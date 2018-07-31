@@ -43,6 +43,7 @@ class CTokenize p where
 
 
 -- | Properties for parsing
+-- | Type parsing for atoms (text delimited by specified delimiters)
 data TokenizeAtom 
     = TokenizeAtom 
         { ta_splits  :: [T.Text]         -- Array of delimiters for atoms
@@ -50,6 +51,8 @@ data TokenizeAtom
         , ta_clean   :: Bool             -- Clearing from empty tokens
         }
 
+-- | Type parsing for atoms (text delimited by specified delimiters) with
+-- specified delimiters in result array
 data TokenizeAtomDm 
     = TokenizeAtomDm 
         { tad_splits  :: [T.Text]        -- Array of delimiters for blocks (open block, close block)
@@ -57,6 +60,8 @@ data TokenizeAtomDm
         , tad_clean   :: Bool            -- Clearing from empty tokens
         }
 
+-- | Type parsing for block 
+-- The text is divided by the specified pair delimiters (opening and closing block)
 data TokenizeBlock 
     = TokenizeBlock 
         { tb_block   :: (T.Text, T.Text) -- Defining block boundaries
@@ -68,32 +73,14 @@ data TokenizeBlock
 
 
 -- | Data for token after parsing
-data TokenAtom   = TokenEmpty      | TokenAtom      T.Text                        deriving (Show, Eq)
+data TokenAtom   = TokenEmpty      | TokenAtom      T.Text                          deriving (Show, Eq)
 data TokenAtomDm = TokenADMEmpty   | TokenADMBody   T.Text | TokenADMDelm    T.Text deriving (Show, Eq)
 data TokenBlock  = TokenBlockEmpty | TokenBlockBody T.Text | TokenBlockOther T.Text deriving (Show, Eq)
---data TokenBlock  = TokenBlockEmpty | TokenBlockBody T.Text | TokenBlockDelm T.Text | TokenBlockOther T.Text deriving (Show, Eq)
-data TokenOther  =                   TokenOther     T.Text                        deriving (Show, Eq)
+data TokenOther  =                   TokenOther     T.Text                          deriving (Show, Eq)
 
 
 
--- | Adapter class. The implementation allows you to create adapters 
--- between different types.
---class Adaptable a b | a -> b where
---    adapter :: a -> b
-
---instance Adaptable TokenAtomDm TokenBlock where
---    adapter TokenADMEmpty = TokenBlockEmpty
---    adapter (TokenADMBody v) = TokenBlockBody v
---    adapter (TokenADMDelm v) = TokenBlockDelm v
-
--- | Data of type block for token
---data TypeBlock 
---    = TBBody
---    | TBDelm
---    deriving (Show, Eq)
-
-
-
+-- | Space 
 space :: T.Text
 space = " "
 
@@ -278,9 +265,11 @@ genBlocks tzb ((ABSec aa):xs) =
 -- Auxiliary functions   ----------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------
 
-recAtom :: [T.Text] 
-        -> [T.Text] 
-        -> [T.Text]
+-- | Separation of lists of texts according to the list of separators
+-- For each item of list
+recAtom :: [T.Text]     -- List os separators 
+        -> [T.Text]     -- List of texts for separation
+        -> [T.Text]     -- Result list
 recAtom [] texts    = texts
 recAtom tss texts =  
     foldl recAtomN tss texts
@@ -291,13 +280,15 @@ recAtom tss texts =
 
 
 
-recIsStart :: Maybe [T.Text] 
-           -> T.Text 
-           -> Bool
+-- | Check is any start prefix text according list of preffixes 
+recIsStart :: Maybe [T.Text]    -- List of preffixes in Maybe type
+           -> T.Text            -- Text
+           -> Bool              -- Flag of result
 recIsStart Nothing  _    = True
 recIsStart (Just p) text = any (`T.isPrefixOf` text) p
 
 
+-- | Auxiliary type
 data Crumb 
     = TCrBody T.Text
     | TCrDelm T.Text
@@ -306,8 +297,10 @@ data Crumb
 type Crumbs = [Crumb]
 
 
-isEmptyTCr :: Crumb
-           -> Bool
+
+-- | Check for empty of Crumb type
+isEmptyTCr :: Crumb     -- Crumb type for checking
+           -> Bool      -- Result
 isEmptyTCr (TCrBody "") = 
     True
 isEmptyTCr (TCrDelm "") = 
